@@ -54,8 +54,10 @@ transform_file = "puzzles/puzzle_affine_1/warp_mat_1__H_521__W_760_.txt"
 with open(transform_file, "r") as f:
     data = f.readlines()
     warp_mat = np.array([list(map(float, line.strip().split())) for line in data])
-img0 = cv2.imread(r"puzzles/puzzle_affine_1/pieces/piece_1.jpg")
 
+warp_mat=np.delete(warp_mat,-1,axis=0)
+img0 = cv2.imread(r"puzzles/puzzle_affine_1/pieces/piece_1.jpg")
+img0 = cv2.warpAffine(img0,warp_mat,(760, 521))
 # Convert to grayscale
 gray0 = cv2.cvtColor(img0, cv2.COLOR_BGR2GRAY)
 
@@ -75,16 +77,16 @@ kp1, des1 = sift.detectAndCompute(gray1, None)
 
 # Apply transformation to first puzzle piece
 first_piece = pieces[0]
-transformed_piece = cv2.warpPerspective(first_piece, warp_mat, (760, 521))
+transformed_piece = cv2.warpAffine(first_piece, warp_mat, (760, 521))
 first_piece1 = pieces[1]
-transformed_piece1 = cv2.warpPerspective(first_piece1, warp_mat, (760, 521))
+transformed_piece1 = cv2.warpAffine(first_piece1, warp_mat, (760, 521))
 
 # numpy_horizontal_concat = np.concatenate((transformed_piece, transformed_piece1), axis=1)
 # # Display transformed puzzle piece
-# cv2.imshow("Transformed Piece", numpy_horizontal_concat)
-#
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
+cv2.imshow("Transformed Piece", transformed_piece)
+
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 
 
 # distance matrix calculation
@@ -118,7 +120,7 @@ dist_matrix = np.linalg.norm(des0[:, np.newaxis] - des1, axis=2)
 # good_matches = np.array(good_matches)
 
 # Ratio test parameters
-ratio_threshold = 0.4
+ratio_threshold = 0.3
 good_matches = []
 
 # Loop through each descriptor in des0 and compare to closest descriptors in des1
@@ -154,17 +156,31 @@ img2_pt2=good_matches[2][1]
 img1_pt3=good_matches[3][0]
 img2_pt3=good_matches[3][1]
 
-q=kp1[img1_pt1].pt
+#q=kp1[img1_pt1].pt
 
 src_pts = np.float32([kp0[img1_pt1].pt, kp0[img1_pt2].pt, kp0[img1_pt3].pt])
 dst_pts = np.float32([kp1[img2_pt1].pt, kp1[img2_pt2].pt, kp1[img2_pt3].pt])
 
 # Compute the affine transformation using OpenCV's getAffineTransform() function
-M = cv2.getAffineTransform(src_pts, dst_pts)
+M = cv2.getAffineTransform(dst_pts, src_pts)
 
 # Print the resulting transformation matrix
 print("Affine transformation matrix:")
 print(M)
+img1 = cv2.warpAffine(img1,M,(760, 521))
+cv2.imshow("Matches", img1)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+# Stitch warped puzzle pieces together
+result = np.zeros_like(img0)
+result[img0 != 0] = img0[img0 != 0]
+result[img1 != 0] = img1[img1 != 0]
+
+# Display result
+cv2.imshow("Puzzle", result)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 x=5
 
 
