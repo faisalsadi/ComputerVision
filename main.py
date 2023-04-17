@@ -1,189 +1,229 @@
-# import cv2
-#
-# # Load puzzle piece image
-# img = cv2.imread(r"puzzles/puzzle_affine_1/pieces/piece_2.jpg")
-#
-# # Convert to grayscale
-# gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-#
-# # Initialize SIFT detector
-# sift = cv2.SIFT_create()
-#
-# # transform_file = "puzzles/puzzle_affine_1/warp_mat_1__H_521__W_760_.txt"
-# # with open(transform_file, "r") as f:
-# #     data = f.readlines()
-# #     warp_mat = np.array([list(map(float, line.strip().split())) for line in data])
-#
-# # Detect keypoints and compute descriptors
-# kp, des = sift.detectAndCompute(gray, None)
-#
-# # Draw keypoints on image
-# img_kp = cv2.drawKeypoints(img, kp, None)
-#
-# # Show image with keypoints
-# cv2.imshow('Keypoints', img_kp)
-# cv2.waitKey(0)
-# cv2.destroyAllWinwdows()
-
-############################################################
-
-
-
-
-
-
-
-
-
 ####################
+
+
+def ransac_loop(matches, keypoints1, keypoints2, num_iterations=100, tolerance=10):
+    best_residual_error = np.inf
+    best_inliers = []
+    best_transformation = None
+
+    for i in range(num_iterations):
+        # Choose 4 random matches
+        indices = np.random.choice(matches.shape[0], 4, replace=False)
+        src_pts = np.float32([keypoints1[m.queryIdx].pt for m in matches[indices]])
+        dst_pts = np.float32([keypoints2[m.trainIdx].pt for m in matches[indices]])
+
+        # Compute the transformation matrix
+        transformation, _ = cv2.getAffineTransform(src_pts, dst_pts, cv2.RANSAC, tolerance)
+
+        # Calculate residual error for all matches
+        errors = []
+        inliers = []
+        for j, match in enumerate(matches):
+            src_pt = np.array([keypoints1[match.queryIdx].pt])
+            dst_pt = np.array([keypoints2[match.trainIdx].pt])
+            predicted_dst_pt = cv2.perspectiveTransform(src_pt.reshape(-1, 1, 2), transformation).reshape(2)
+            error = np.linalg.norm(dst_pt - predicted_dst_pt)
+            errors.append(error)
+            if error < tolerance:
+                inliers.append(j)
+
+        residual_error = np.mean(errors)
+
+        # Update best transformation if the current transformation is better
+        if residual_error < best_residual_error:
+            best_residual_error = residual_error
+            best_inliers = inliers
+            best_transformation = transformation
+
+    return best_transformation, best_inliers, best_residual_error
+
+
+def ransac_affine(src_points, dst_points, max_iterations=1000, distance_threshold=10):
+    """
+    Performs RANSAC algorithm to calculate the best affine transformation matrix that maps src_points to dst_points.
+
+    :param src_points: array of source points (Nx2)
+    :param dst_points: array of destination points (Nx2)
+    :param max_iterations: maximum number of iterations for RANSAC algorithm
+    :param distance_threshold: maximum allowable distance between a point and its transformed point
+    :return: best_affine_mat: the best affine transformation matrix (2x3)
+    """
+    best_affine_mat = None
+    best_inlier_count = 0
+
+    for i in range(max_iterations):
+        # Randomly select 3 pairs of points
+        indices = np.random.choice(len(src_points), size=3, replace=False)
+        src_sample = src_points[indices]
+        dst_sample = dst_points[indices]
+
+        # Calculate affine transformation matrix
+        src_x = src_sample[:, 0]
+        src_y = src_sample[:, 1]
+        A = np.vstack([src_x, src_y, np.ones(len(src_x))]).T
+        B = dst_sample.flatten()
+        affine_mat, _, _, _ = np.linalg.lstsq(A, B, rcond=None)
+        affine_mat = np.append(affine_mat, [0, 0, 1]).reshape(3, 3)
+
+        # Transform all source points using the calculated matrix
+        transformed_points = np.zeros_like(src_points)
+        for j, point in enumerate(src_points):
+            transformed_points[j] = affine_mat[:2, :2] @ point + affine_mat[:2, 2]
+
+        # Calculate the residual errors for each point
+        errors = np.sqrt(np.sum((dst_points - transformed_points) ** 2, axis=1))
+
+        # Count inliers that are within distance_threshold
+        inlier_count = np.sum(errors < distance_threshold)
+
+        # If current inlier count is higher than the best so far, update the best matrix and inlier count
+        if inlier_count > best_inlier_count:
+            best_inlier_count = inlier_count
+            best_affine_mat = affine_mat
+
+    return best_affine_mat
+
+
+def transform_points(points, affine_mat):
+    """
+    Transforms an array of points using the given affine transformation matrix.
+
+    :param points: array of points to be transformed (Nx2)
+    :param affine_mat: 2D affine transformation matrix (2x3)
+    :return: transformed_points: array of transformed points (Nx2)
+    """
+    transformed_points = np.zeros_like(points)
+    for i, point in enumerate(points):
+        transformed_points[i] = affine_mat[:2, :2] @ point + affine_mat[:2, 2]
+    return transformed_points
+
+
+def ransac_affine1(src_pts, dst_pts, max_iter=1000, inlier_threshold=2):
+    best_affine = None
+    best_inliers = []
+    for i in range(max_iter):
+        # Randomly select 3 points from both sets of points
+        idx = np.random.choice(src_pts.shape[0], 3, replace=True)
+        src_sample = src_pts[idx]
+        dst_sample = dst_pts[idx]
+
+        # Calculate affine transformation matrix
+        affine = cv2.getAffineTransform(src_sample, dst_sample)
+
+        # Calculate transformed points using the affine matrix
+        # transformed_pts = np.dot(affine, np.vstack((src_pts.T, np.ones((1, src_pts.shape[0])))))
+        # transformed_pts = transformed_pts[:2].T / transformed_pts[2].T
+        transformed_pts=transform_points(src_pts,affine)
+
+        # Calculate residuals and inliers
+        residuals = np.sqrt(np.sum((transformed_pts - dst_pts) ** 2, axis=1))
+        inliers = np.where(residuals < inlier_threshold)[0]
+
+        # Update best affine transformation and inliers
+        if len(inliers) > len(best_inliers):
+            best_affine = affine
+            best_inliers = inliers
+
+    # Calculate final affine transformation matrix using all inliers
+    #final_affine = cv2.getAffineTransform(src_pts[best_inliers], dst_pts[best_inliers])
+
+    return best_affine,len(best_inliers)
+################################################################################################################
 import cv2
 import numpy as np
 import os
 # # Initialize SIFT detector
 sift = cv2.SIFT_create()
 # Load puzzle pieces
-pieces_dir = "puzzles/puzzle_affine_1/pieces"
+pieces_dir = "puzzles/puzzle_affine_5/pieces"
 pieces = []
 for filename in os.listdir(pieces_dir):
     if filename.endswith(".png") or filename.endswith(".jpg"):
         piece = cv2.imread(os.path.join(pieces_dir, filename))
         pieces.append(piece)
-
 # Load transformation
-transform_file = "puzzles/puzzle_affine_1/warp_mat_1__H_521__W_760_.txt"
+transform_file = "puzzles/puzzle_affine_5/warp_mat_1__H_510__W_783_.txt"
 with open(transform_file, "r") as f:
     data = f.readlines()
     warp_mat = np.array([list(map(float, line.strip().split())) for line in data])
-
 warp_mat=np.delete(warp_mat,-1,axis=0)
-img0 = cv2.imread(r"puzzles/puzzle_affine_1/pieces/piece_1.jpg")
-img0 = cv2.warpAffine(img0,warp_mat,(760, 521))
-# Convert to grayscale
-gray0 = cv2.cvtColor(img0, cv2.COLOR_BGR2GRAY)
-
-
-img1 = cv2.imread(r"puzzles/puzzle_affine_1/pieces/piece_2.jpg")
-
-# Convert to grayscale
-gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-
-
-
-# Detect keypoints and compute descriptors
-kp0, des0 = sift.detectAndCompute(gray0, None)
-
-# Detect keypoints and compute descriptors
-kp1, des1 = sift.detectAndCompute(gray1, None)
-
-# Apply transformation to first puzzle piece
-first_piece = pieces[0]
-transformed_piece = cv2.warpAffine(first_piece, warp_mat, (760, 521))
-first_piece1 = pieces[1]
-transformed_piece1 = cv2.warpAffine(first_piece1, warp_mat, (760, 521))
-
-# numpy_horizontal_concat = np.concatenate((transformed_piece, transformed_piece1), axis=1)
-# # Display transformed puzzle piece
-cv2.imshow("Transformed Piece", transformed_piece)
-
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-
-
-# distance matrix calculation
-# Calculate distance matrix
-dist_matrix = np.linalg.norm(des0[:, np.newaxis] - des1, axis=2)
-# Set ratio test threshold
-# ratio_thresh = 0.75
-#
-# # Find two closest matches for each keypoint in first image
-# matches = np.argpartition(dist_matrix, 2, axis=1)[:, :2]
-#
-# # Initialize arrays to store matches that pass ratio test
-# good_matches = []
-# idx1 = []
-# idx2 = []
-#
-# # Loop through all keypoints in first image
-# for i in range(matches.shape[0]):
-#     # Get distances to closest and second closest matches
-#     dist1 = dist_matrix[i, matches[i, 0]]
-#     dist2 = dist_matrix[i, matches[i, 1]]
-#
-#     # Check if ratio of distances is less than threshold
-#     if dist1 / dist2 < ratio_thresh:
-#         # Store match if it passes ratio test
-#         good_matches.append(cv2.DMatch(i, matches[i, 0], dist1))
-#         idx1.append(matches[i, 0])
-#         idx2.append(i)
-#
-# # Convert matches to array
-# good_matches = np.array(good_matches)
-
+pieces[0] = cv2.warpAffine(pieces[0],warp_mat,(783, 510),flags=cv2.INTER_LINEAR)
+result = pieces[0]
+del pieces[0]
 # Ratio test parameters
-ratio_threshold = 0.3
-good_matches = []
+kps=[]
+dess=[]
+for i in range(len(pieces)):
+    k,d=sift.detectAndCompute(cv2.cvtColor(pieces[i], cv2.COLOR_BGR2GRAY), None)
+    kps.append(k)
+    dess.append(d)
+ratio_threshold = 0.7
+coverage_count = np.zeros((result.shape[0], result.shape[1],3), dtype=np.uint8)
+coverage_count[result[:, :, 0] > 0] += 30
+while len(pieces)>0:
+    # distance matrix calculation
 
-# Loop through each descriptor in des0 and compare to closest descriptors in des1
-for i, descriptor in enumerate(des0):
-    # Calculate distance to closest and second closest descriptors
-    distances = np.linalg.norm(descriptor - des1, axis=1)
-    sorted_distances_idx = np.argsort(distances)
-    closest_distance = distances[sorted_distances_idx[0]]
-    second_closest_distance = distances[sorted_distances_idx[1]]
+    gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+    kp, des = sift.detectAndCompute(gray, None)
+    best_inl=-np.inf
+    best_index=-1
+    best_transformation=[]
+    ## loop over all pieces
+    for j in range(len(pieces)):
+        #gray= cv2.cvtColor(pieces[j],cv2.COLOR_BGR2GRAY)
+        kp_target, des_target = kps[j],dess[j]
+        # Calculate distance matrix
+        dist_matrix = np.linalg.norm(des[:, np.newaxis] - des_target, axis=2)
+        good_matches = []
+        # Loop through each descriptor in des0 and compare to closest descriptors in des1
+        for i, descriptor in enumerate(des):
+            # Calculate distance to closest and second closest descriptors
+            distances = np.linalg.norm(descriptor - des_target, axis=1)
+            sorted_distances_idx = np.argsort(distances)
+            closest_distance = distances[sorted_distances_idx[0]]
+            second_closest_distance = distances[sorted_distances_idx[1]]
 
-    # Check if the match passes the ratio test
-    if closest_distance / second_closest_distance < ratio_threshold:
-        # Save the index of the matching descriptor in des1
-        match_idx = sorted_distances_idx[0]
-        good_matches.append((i, match_idx))
+            # Check if the match passes the ratio test
+            if closest_distance / second_closest_distance < ratio_threshold:
+                # Save the index of the matching descriptor in des1
+                match_idx = sorted_distances_idx[0]
+                good_matches.append((i, match_idx))
 
-# Draw matching lines on image
-img_matches = cv2.drawMatches(img0, kp0, img1, kp1, [cv2.DMatch(_[0], _[1], 0) for _ in good_matches], None)
+# # Draw matching lines on image
+# img_matches = cv2.drawMatches(pieces[0], kps[0], pieces[1], kps[1], [cv2.DMatch(_[0], _[1], 0) for _ in good_matches], None)
+#
+# # Show image with matches
+# cv2.imshow("Matches", img_matches)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
 
-# Show image with matches
-cv2.imshow("Matches", img_matches)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
 
-
-# Define the coordinates of 3 matches in the source and destination images
-img1_pt1=good_matches[1][0]
-img2_pt1=good_matches[1][1]
-
-img1_pt2=good_matches[2][0]
-img2_pt2=good_matches[2][1]
-
-img1_pt3=good_matches[3][0]
-img2_pt3=good_matches[3][1]
-
-#q=kp1[img1_pt1].pt
-
-src_pts = np.float32([kp0[img1_pt1].pt, kp0[img1_pt2].pt, kp0[img1_pt3].pt])
-dst_pts = np.float32([kp1[img2_pt1].pt, kp1[img2_pt2].pt, kp1[img2_pt3].pt])
-
-# Compute the affine transformation using OpenCV's getAffineTransform() function
-M = cv2.getAffineTransform(dst_pts, src_pts)
-
-# Print the resulting transformation matrix
-print("Affine transformation matrix:")
-print(M)
-img1 = cv2.warpAffine(img1,M,(760, 521))
-cv2.imshow("Matches", img1)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-
-# Stitch warped puzzle pieces together
-result = np.zeros_like(img0)
-result[img0 != 0] = img0[img0 != 0]
-result[img1 != 0] = img1[img1 != 0]
-
-# Display result
+    # Compute the affine transformation using OpenCV's getAffineTransform() function
+        src_pts = np.float32([kp[m[0]].pt for m in good_matches])#.reshape(-1,  2)
+        dst_pts = np.float32([kp_target[m[1]].pt for m in good_matches])#.reshape(-1,  2)
+        if len(src_pts)<3 or len(dst_pts)<3:
+            continue
+        M,inl= ransac_affine1(dst_pts,src_pts)
+        if inl>best_inl:
+            best_inl = inl
+            best_index = j
+            best_transformation = M
+    # Print the resulting transformation matrix
+    # print("Affine transformation matrix:")
+    # print(M)
+    pieces[best_index] = cv2.warpAffine(pieces[best_index],best_transformation,(result.shape[1],result.shape[0]),flags=cv2.INTER_LINEAR)
+    # Stitch warped puzzle pieces together
+    coverage_count[pieces[best_index][:, :, 0] > 0] += 30
+    result[pieces[best_index] != 0] = pieces[best_index][pieces[best_index] != 0]
+    del pieces[best_index]
+    del kps[best_index]
+    del dess[best_index]
+# Display results
 cv2.imshow("Puzzle", result)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-x=5
+cv2.imshow("coverage", coverage_count)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 
-
-#
-#
 
