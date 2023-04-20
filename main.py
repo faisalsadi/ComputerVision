@@ -84,7 +84,7 @@ def transform_points_homography(points, homography_mat):
     transformed_points = (transformed_homogeneous[:2, :] / transformed_homogeneous[2, :]).T
 
     return transformed_points
-def ransac_affine1(src_pts, dst_pts, max_iter=1000, inlier_threshold=5):
+def ransac_affine1(src_pts, dst_pts, max_iter=1000, inlier_threshold=2):
     best_affine = None
     best_inliers = []
     for i in range(max_iter):
@@ -156,21 +156,21 @@ def ransac_homography(src_pts, dst_pts, max_iter=1000, inlier_threshold=2):
 # # Initialize SIFT detector
 sift = cv2.SIFT_create()
 # Load puzzle pieces
-pieces_dir = "puzzles/puzzle_affine_3/pieces"
+pieces_dir = "puzzles/puzzle_affine_5/pieces"
 pieces = []
 for filename in os.listdir(pieces_dir):
     if filename.endswith(".png") or filename.endswith(".jpg"):
         piece = cv2.imread(os.path.join(pieces_dir, filename))
         pieces.append(piece)
 # Load transformation
-transform_file = "puzzles/puzzle_affine_3/warp_mat_1__H_497__W_741_.txt"
+transform_file = "puzzles/puzzle_affine_5/warp_mat_1__H_510__W_783_.txt"
 with open(transform_file, "r") as f:
     data = f.readlines()
     warp_mat = np.array([list(map(float, line.strip().split())) for line in data])
 warp_mat=np.delete(warp_mat,-1,axis=0)
 onesimage =np.ones((pieces[0].shape[0], pieces[0].shape[1],3), dtype=np.uint8)
-pieces[0] = cv2.warpAffine(pieces[0],warp_mat,(741, 497),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
-onesimage = cv2.warpAffine(onesimage,warp_mat,(741, 497),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
+pieces[0] = cv2.warpAffine(pieces[0],warp_mat,(783, 510),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
+onesimage = cv2.warpAffine(onesimage,warp_mat,(783, 510),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
 result = pieces[0]
 del pieces[0]
 plt.imshow(result)
@@ -259,7 +259,12 @@ while len(pieces)>0:
     # plt.imshow(pieces[best_index])
     # plt.show()
     coverage_count[ones_image[:, :, 0] > 0] += 30
-    result[pieces[best_index] != 0] = pieces[best_index][pieces[best_index] != 0]
+    gray_img_res = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+    gray_img_piece = cv2.cvtColor(pieces[best_index], cv2.COLOR_BGR2GRAY)
+    for i1 in range (result.shape[0]):
+        for i2 in range (result.shape[1]):
+            if gray_img_res[i1][i2] == 0 and gray_img_piece[i1][i2]!=0:
+                result[i1][i2] = pieces[best_index][i1][i2]
     # Stack the images vertically
     #result = cv2.addWeighted(result, 0.5, pieces[best_index], 0.5, 0)
     plt.imshow(result)

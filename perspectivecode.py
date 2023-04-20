@@ -174,7 +174,7 @@ def ransac_homography(src_pts, dst_pts, max_iter=1000, inlier_threshold=2):
         inliers = np.where(residuals < inlier_threshold)[0]
 
         # Update best affine transformation and inliers
-        if len(inliers) > len(best_inliers) and len(inliers)>=4:
+        if len(inliers) > len(best_inliers) and len(inliers)>=20:
             best_homograph = homograph
             best_inliers = inliers
 
@@ -191,21 +191,21 @@ from PIL import Image
 # # Initialize SIFT detector
 sift = cv2.SIFT_create()
 # Load puzzle pieces
-pieces_dir = "puzzles/puzzle_homography_1/pieces"
+pieces_dir = "puzzles/puzzle_homography_3/pieces"
 pieces = []
 for filename in os.listdir(pieces_dir):
     if filename.endswith(".png") or filename.endswith(".jpg"):
         piece = cv2.imread(os.path.join(pieces_dir, filename))
         pieces.append(piece)
 # Load transformation
-transform_file = "puzzles/puzzle_homography_1/warp_mat_1__H_549__W_699_.txt"
+transform_file = "puzzles/puzzle_homography_3/warp_mat_1__H_502__W_760_.txt"
 with open(transform_file, "r") as f:
     data = f.readlines()
     warp_mat = np.array([list(map(float, line.strip().split())) for line in data])
 #warp_mat=np.delete(warp_mat,-1,axis=0)
 onesimage =np.ones((pieces[0].shape[0], pieces[0].shape[1],3), dtype=np.uint8)
-pieces[0] = cv2.warpPerspective(pieces[0],warp_mat,(699, 549),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
-onesimage = cv2.warpPerspective(onesimage,warp_mat,(699, 549),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
+pieces[0] = cv2.warpPerspective(pieces[0],warp_mat,(760, 502),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
+onesimage = cv2.warpPerspective(onesimage,warp_mat,(760, 502),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
 result = pieces[0]
 del pieces[0]
 # Ratio test parameters
@@ -215,7 +215,7 @@ for i in range(len(pieces)):
     k,d=sift.detectAndCompute(cv2.cvtColor(pieces[i], cv2.COLOR_BGR2GRAY), None)
     kps.append(k)
     dess.append(d)
-ratio_threshold = 0.7
+ratio_threshold = 0.4
 coverage_count = np.zeros((result.shape[0], result.shape[1],3), dtype=np.uint8)
 coverage_count[onesimage[:, :, 0] > 0] += 30
 plt.imshow(result)
@@ -281,13 +281,26 @@ while len(pieces)>0:
     if best_index == -1:
         print("detect failed")
         break
-    ones_image= np.ones((pieces[best_index].shape[0], pieces[best_index].shape[1],3), dtype=np.uint8)
+    # ones_image= np.ones((pieces[best_index].shape[0], pieces[best_index].shape[1],3), dtype=np.uint8)
+    mask = np.ones_like(pieces[best_index])
     pieces[best_index] = cv2.warpPerspective(pieces[best_index],best_transformation,(result.shape[1],result.shape[0]),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
-    ones_image=cv2.warpPerspective(ones_image,best_transformation,(result.shape[1],result.shape[0]),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
+    mask=cv2.warpPerspective(mask,best_transformation,(result.shape[1],result.shape[0]),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
     # Stitch warped puzzle pieces together
 
-    coverage_count[ones_image [:, :, 0] > 0] += 30
-    result[pieces[best_index] != 0] = pieces[best_index][pieces[best_index] != 0]
+    # coverage_count[mask [:, :, 0] > 0] += 30
+    coverage_count[mask== 1] += 30
+    # result[pieces[best_index] != 0] = pieces[best_index][pieces[best_index] != 0]
+    #result[mask == 1] = pieces[best_index][mask == 1]
+    gray_img_res = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+    gray_img_piece = cv2.cvtColor(pieces[best_index], cv2.COLOR_BGR2GRAY)
+    for i1 in range (result.shape[0]):
+        for i2 in range (result.shape[1]):
+             if gray_img_res[i1][i2] == 0 and gray_img_piece[i1][i2]!=0:
+                result[i1][i2] = pieces[best_index][i1][i2]
+                # else:
+                #     result[i1][i2] = (result[i1][i2]+pieces[best_index][i1][i2])/2
+
+
     plt.imshow(result)
     plt.show()
     del pieces[best_index]
