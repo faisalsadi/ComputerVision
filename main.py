@@ -168,7 +168,9 @@ with open(transform_file, "r") as f:
     data = f.readlines()
     warp_mat = np.array([list(map(float, line.strip().split())) for line in data])
 warp_mat=np.delete(warp_mat,-1,axis=0)
+onesimage =np.ones((pieces[0].shape[0], pieces[0].shape[1],3), dtype=np.uint8)
 pieces[0] = cv2.warpAffine(pieces[0],warp_mat,(741, 497),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
+onesimage = cv2.warpAffine(onesimage,warp_mat,(741, 497),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
 result = pieces[0]
 del pieces[0]
 plt.imshow(result)
@@ -182,7 +184,7 @@ for i in range(len(pieces)):
     dess.append(d)
 ratio_threshold = 0.7
 coverage_count = np.zeros((result.shape[0], result.shape[1],3), dtype=np.uint8)
-coverage_count[result[:, :, 0] > 0] += 30
+coverage_count[onesimage[:, :, 0] > 0] += 30
 done=1
 while len(pieces)>0:
     # distance matrix calculation
@@ -249,11 +251,14 @@ while len(pieces)>0:
     if best_index == -1:
         print("detect failed")
         break
+    ones_image = np.ones((pieces[best_index].shape[0], pieces[best_index].shape[1], 3), dtype=np.uint8)
     pieces[best_index] = cv2.warpAffine(pieces[best_index],best_transformation,(result.shape[1],result.shape[0]),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
+    ones_image = cv2.warpAffine(ones_image, best_transformation, (result.shape[1], result.shape[0]),
+                                     flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_TRANSPARENT)
     # Stitch warped puzzle pieces together
     # plt.imshow(pieces[best_index])
     # plt.show()
-    coverage_count[pieces[best_index][:, :, 0] > 0] += 30
+    coverage_count[ones_image[:, :, 0] > 0] += 30
     result[pieces[best_index] != 0] = pieces[best_index][pieces[best_index] != 0]
     # Stack the images vertically
     #result = cv2.addWeighted(result, 0.5, pieces[best_index], 0.5, 0)
@@ -265,8 +270,8 @@ while len(pieces)>0:
 # Display results
 plt.imshow(result)
 plt.show()
-# plt.imshow(coverage_count)
-# plt.show()
+plt.imshow(coverage_count)
+plt.show()
 cv2.imwrite('puzzles/puzzle_homography_1/image.png', result)
 
 
