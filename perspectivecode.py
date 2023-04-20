@@ -191,19 +191,21 @@ from PIL import Image
 # # Initialize SIFT detector
 sift = cv2.SIFT_create()
 # Load puzzle pieces
-pieces_dir = "puzzles/puzzle_homography_3/pieces"
+pieces_dir = "puzzles/puzzle_homography_1/pieces"
 pieces = []
 for filename in os.listdir(pieces_dir):
     if filename.endswith(".png") or filename.endswith(".jpg"):
         piece = cv2.imread(os.path.join(pieces_dir, filename))
         pieces.append(piece)
 # Load transformation
-transform_file = "puzzles/puzzle_homography_3/warp_mat_1__H_502__W_760_.txt"
+transform_file = "puzzles/puzzle_homography_1/warp_mat_1__H_549__W_699_.txt"
 with open(transform_file, "r") as f:
     data = f.readlines()
     warp_mat = np.array([list(map(float, line.strip().split())) for line in data])
 #warp_mat=np.delete(warp_mat,-1,axis=0)
-pieces[0] = cv2.warpPerspective(pieces[0],warp_mat,(760, 502),flags=cv2.INTER_LINEAR,borderMode=cv2.BORDER_TRANSPARENT)
+onesimage =np.ones((pieces[0].shape[0], pieces[0].shape[1],3), dtype=np.uint8)
+pieces[0] = cv2.warpPerspective(pieces[0],warp_mat,(699, 549),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
+onesimage = cv2.warpPerspective(onesimage,warp_mat,(699, 549),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
 result = pieces[0]
 del pieces[0]
 # Ratio test parameters
@@ -213,9 +215,12 @@ for i in range(len(pieces)):
     k,d=sift.detectAndCompute(cv2.cvtColor(pieces[i], cv2.COLOR_BGR2GRAY), None)
     kps.append(k)
     dess.append(d)
-ratio_threshold = 0.4
+ratio_threshold = 0.7
 coverage_count = np.zeros((result.shape[0], result.shape[1],3), dtype=np.uint8)
-coverage_count[result[:, :, 0] > 0] += 30
+coverage_count[onesimage[:, :, 0] > 0] += 30
+plt.imshow(result)
+plt.show()
+done=1
 while len(pieces)>0:
     # distance matrix calculation
 
@@ -224,7 +229,8 @@ while len(pieces)>0:
     best_inl=-np.inf
     best_index=-1
     best_transformation=[]
-    print(des)
+    print("solved :",done)
+    done+=1
     ## loop over all pieces
     for j in range(len(pieces)):
         #gray= cv2.cvtColor(pieces[j],cv2.COLOR_BGR2GRAY)
@@ -275,9 +281,12 @@ while len(pieces)>0:
     if best_index == -1:
         print("detect failed")
         break
-    pieces[best_index] = cv2.warpPerspective(pieces[best_index],best_transformation,(result.shape[1],result.shape[0]),flags=cv2.INTER_LINEAR,borderMode=cv2.BORDER_TRANSPARENT)
+    ones_image= np.ones((pieces[best_index].shape[0], pieces[best_index].shape[1],3), dtype=np.uint8)
+    pieces[best_index] = cv2.warpPerspective(pieces[best_index],best_transformation,(result.shape[1],result.shape[0]),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
+    ones_image=cv2.warpPerspective(ones_image,best_transformation,(result.shape[1],result.shape[0]),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
     # Stitch warped puzzle pieces together
-    coverage_count[pieces[best_index][:, :, 0] > 0] += 30
+
+    coverage_count[ones_image [:, :, 0] > 0] += 30
     result[pieces[best_index] != 0] = pieces[best_index][pieces[best_index] != 0]
     plt.imshow(result)
     plt.show()
@@ -285,12 +294,13 @@ while len(pieces)>0:
     del kps[best_index]
     del dess[best_index]
 # Display results
-cv2.imshow("Puzzle", result)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-cv2.imshow("coverage", coverage_count)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+plt.imshow(result)
+plt.show()
+plt.imshow(coverage_count)
+plt.show()
+# cv2.imshow("coverage", coverage_count)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
 # new_image = Image.new(result,(699, 549))
 
 # Draw on the image (optional)

@@ -1,7 +1,10 @@
 ####################
 import math
 from PIL import Image
-
+import cv2
+import numpy as np
+import os
+import matplotlib.pyplot as plt
 def ransac_affine(src_points, dst_points, max_iterations=1000, distance_threshold=10):
     """
     Performs RANSAC algorithm to calculate the best affine transformation matrix that maps src_points to dst_points.
@@ -105,7 +108,7 @@ def ransac_affine1(src_pts, dst_pts, max_iter=1000, inlier_threshold=5):
         inliers = np.where(residuals < inlier_threshold)[0]
 
         # Update best affine transformation and inliers
-        if len(inliers) > len(best_inliers) and len(inliers)>=4:
+        if len(inliers) > len(best_inliers) and len(inliers)>=3:
             best_affine = affine
             best_inliers = inliers
 
@@ -149,28 +152,27 @@ def ransac_homography(src_pts, dst_pts, max_iter=1000, inlier_threshold=2):
 
     return best_homograph,len(best_inliers)
 ################################################################################################################
-import cv2
-import numpy as np
-import os
-import matplotlib.pyplot as plt
+
 # # Initialize SIFT detector
 sift = cv2.SIFT_create()
 # Load puzzle pieces
-pieces_dir = "puzzles/puzzle_affine_2/pieces"
+pieces_dir = "puzzles/puzzle_affine_3/pieces"
 pieces = []
 for filename in os.listdir(pieces_dir):
     if filename.endswith(".png") or filename.endswith(".jpg"):
         piece = cv2.imread(os.path.join(pieces_dir, filename))
         pieces.append(piece)
 # Load transformation
-transform_file = "puzzles/puzzle_affine_2/warp_mat_1__H_537__W_735_.txt"
+transform_file = "puzzles/puzzle_affine_3/warp_mat_1__H_497__W_741_.txt"
 with open(transform_file, "r") as f:
     data = f.readlines()
     warp_mat = np.array([list(map(float, line.strip().split())) for line in data])
 warp_mat=np.delete(warp_mat,-1,axis=0)
-pieces[0] = cv2.warpAffine(pieces[0],warp_mat,(735, 537),flags=cv2.INTER_LINEAR,borderMode=cv2.BORDER_TRANSPARENT)
+pieces[0] = cv2.warpAffine(pieces[0],warp_mat,(741, 497),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
 result = pieces[0]
 del pieces[0]
+plt.imshow(result)
+plt.show()
 # Ratio test parameters
 kps=[]
 dess=[]
@@ -247,12 +249,14 @@ while len(pieces)>0:
     if best_index == -1:
         print("detect failed")
         break
-    pieces[best_index] = cv2.warpAffine(pieces[best_index],best_transformation,(result.shape[1],result.shape[0]),flags=cv2.INTER_LINEAR,borderMode=cv2.BORDER_TRANSPARENT)
+    pieces[best_index] = cv2.warpAffine(pieces[best_index],best_transformation,(result.shape[1],result.shape[0]),flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
     # Stitch warped puzzle pieces together
     # plt.imshow(pieces[best_index])
     # plt.show()
     coverage_count[pieces[best_index][:, :, 0] > 0] += 30
     result[pieces[best_index] != 0] = pieces[best_index][pieces[best_index] != 0]
+    # Stack the images vertically
+    #result = cv2.addWeighted(result, 0.5, pieces[best_index], 0.5, 0)
     plt.imshow(result)
     plt.show()
     del pieces[best_index]
@@ -261,8 +265,8 @@ while len(pieces)>0:
 # Display results
 plt.imshow(result)
 plt.show()
-plt.imshow(coverage_count)
-plt.show()
+# plt.imshow(coverage_count)
+# plt.show()
 cv2.imwrite('puzzles/puzzle_homography_1/image.png', result)
 
 
