@@ -1,6 +1,42 @@
 ####################
-import math
-from PIL import Image
+
+
+def ransac_loop(matches, keypoints1, keypoints2, num_iterations=100, tolerance=10):
+    best_residual_error = np.inf
+    best_inliers = []
+    best_transformation = None
+
+    for i in range(num_iterations):
+        # Choose 4 random matches
+        indices = np.random.choice(matches.shape[0], 4, replace=False)
+        src_pts = np.float32([keypoints1[m.queryIdx].pt for m in matches[indices]])
+        dst_pts = np.float32([keypoints2[m.trainIdx].pt for m in matches[indices]])
+
+        # Compute the transformation matrix
+        transformation, _ = cv2.getAffineTransform(src_pts, dst_pts, cv2.RANSAC, tolerance)
+
+        # Calculate residual error for all matches
+        errors = []
+        inliers = []
+        for j, match in enumerate(matches):
+            src_pt = np.array([keypoints1[match.queryIdx].pt])
+            dst_pt = np.array([keypoints2[match.trainIdx].pt])
+            predicted_dst_pt = cv2.perspectiveTransform(src_pt.reshape(-1, 1, 2), transformation).reshape(2)
+            error = np.linalg.norm(dst_pt - predicted_dst_pt)
+            errors.append(error)
+            if error < tolerance:
+                inliers.append(j)
+
+        residual_error = np.mean(errors)
+
+        # Update best transformation if the current transformation is better
+        if residual_error < best_residual_error:
+            best_residual_error = residual_error
+            best_inliers = inliers
+            best_transformation = transformation
+
+    return best_transformation, best_inliers, best_residual_error
+
 
 def ransac_affine(src_points, dst_points, max_iterations=1000, distance_threshold=10):
     """
@@ -81,19 +117,17 @@ def transform_points_homography(points, homography_mat):
     transformed_points = (transformed_homogeneous[:2, :] / transformed_homogeneous[2, :]).T
 
     return transformed_points
-def ransac_affine1(src_pts, dst_pts, max_iter=1000, inlier_threshold=5):
+def ransac_affine1(src_pts, dst_pts, max_iter=1000, inlier_threshold=2):
     best_affine = None
     best_inliers = []
     for i in range(max_iter):
         # Randomly select 3 points from both sets of points
-        idx = np.random.choice(src_pts.shape[0], 3, replace=False)
+        idx = np.random.choice(src_pts.shape[0], 3, replace=True)
         src_sample = src_pts[idx]
         dst_sample = dst_pts[idx]
 
         # Calculate affine transformation matrix
         affine = cv2.getAffineTransform(src_sample, dst_sample)
-        if affine is None:
-            continue
 
         # Calculate transformed points using the affine matrix
         # transformed_pts = np.dot(affine, np.vstack((src_pts.T, np.ones((1, src_pts.shape[0])))))
@@ -105,7 +139,7 @@ def ransac_affine1(src_pts, dst_pts, max_iter=1000, inlier_threshold=5):
         inliers = np.where(residuals < inlier_threshold)[0]
 
         # Update best affine transformation and inliers
-        if len(inliers) > len(best_inliers) and len(inliers)>=4:
+        if len(inliers) > len(best_inliers):
             best_affine = affine
             best_inliers = inliers
 
@@ -140,7 +174,7 @@ def ransac_homography(src_pts, dst_pts, max_iter=1000, inlier_threshold=2):
         inliers = np.where(residuals < inlier_threshold)[0]
 
         # Update best affine transformation and inliers
-        if len(inliers) > len(best_inliers) and len(inliers)>=10:
+        if len(inliers) > len(best_inliers) and len(inliers)>=4:
             best_homograph = homograph
             best_inliers = inliers
 
@@ -153,22 +187,23 @@ import cv2
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from PIL import Image
 # # Initialize SIFT detector
 sift = cv2.SIFT_create()
 # Load puzzle pieces
-pieces_dir = "puzzles/puzzle_affine_2/pieces"
+pieces_dir = "puzzles/puzzle_homography_3/pieces"
 pieces = []
 for filename in os.listdir(pieces_dir):
     if filename.endswith(".png") or filename.endswith(".jpg"):
         piece = cv2.imread(os.path.join(pieces_dir, filename))
         pieces.append(piece)
 # Load transformation
-transform_file = "puzzles/puzzle_affine_2/warp_mat_1__H_537__W_735_.txt"
+transform_file = "puzzles/puzzle_homography_3/warp_mat_1__H_502__W_760_.txt"
 with open(transform_file, "r") as f:
     data = f.readlines()
     warp_mat = np.array([list(map(float, line.strip().split())) for line in data])
-warp_mat=np.delete(warp_mat,-1,axis=0)
-pieces[0] = cv2.warpAffine(pieces[0],warp_mat,(735, 537),flags=cv2.INTER_LINEAR,borderMode=cv2.BORDER_TRANSPARENT)
+#warp_mat=np.delete(warp_mat,-1,axis=0)
+pieces[0] = cv2.warpPerspective(pieces[0],warp_mat,(760, 502),flags=cv2.INTER_LINEAR,borderMode=cv2.BORDER_TRANSPARENT)
 result = pieces[0]
 del pieces[0]
 # Ratio test parameters
@@ -178,10 +213,9 @@ for i in range(len(pieces)):
     k,d=sift.detectAndCompute(cv2.cvtColor(pieces[i], cv2.COLOR_BGR2GRAY), None)
     kps.append(k)
     dess.append(d)
-ratio_threshold = 0.7
+ratio_threshold = 0.4
 coverage_count = np.zeros((result.shape[0], result.shape[1],3), dtype=np.uint8)
 coverage_count[result[:, :, 0] > 0] += 30
-done=1
 while len(pieces)>0:
     # distance matrix calculation
 
@@ -190,24 +224,16 @@ while len(pieces)>0:
     best_inl=-np.inf
     best_index=-1
     best_transformation=[]
-    print("solved :",done)
-    done+=1
+    print(des)
     ## loop over all pieces
     for j in range(len(pieces)):
         #gray= cv2.cvtColor(pieces[j],cv2.COLOR_BGR2GRAY)
         kp_target, des_target = kps[j],dess[j]
         # Calculate distance matrix
+
         dist_matrix = np.linalg.norm(des[:, np.newaxis] - des_target, axis=2)
-        # dist_matrix = []
-        # for i1 in range(des.shape[0]):
-        #     row = []
-        #     for j1 in range(des_target.shape[0]):
-        #         dist = 0
-        #         for k1 in range(des.shape[1]):
-        #             dist += (des[i1][k1] - des_target[j1][k1]) ** 2
-        #         row.append(math.sqrt(dist))
-        #     dist_matrix.append(row)
         good_matches = []
+        choosed = []
         # Loop through each descriptor in des0 and compare to closest descriptors in des1
         for i, descriptor in enumerate(des):
             # Calculate distance to closest and second closest descriptors
@@ -220,6 +246,7 @@ while len(pieces)>0:
             if closest_distance / second_closest_distance < ratio_threshold:
                 # Save the index of the matching descriptor in des1
                 match_idx = sorted_distances_idx[0]
+                choosed.append(match_idx)
                 good_matches.append((i, match_idx))
 
 # # Draw matching lines on image
@@ -234,23 +261,22 @@ while len(pieces)>0:
     # Compute the affine transformation using OpenCV's getAffineTransform() function
         src_pts = np.float32([kp[m[0]].pt for m in good_matches])#.reshape(-1,  2)
         dst_pts = np.float32([kp_target[m[1]].pt for m in good_matches])#.reshape(-1,  2)
-        if len(src_pts)<3 or len(dst_pts)<3:
+        if len(src_pts)<4 or len(dst_pts)<4:
             continue
-        M,inl= ransac_affine1(dst_pts,src_pts)
-        if inl>best_inl and not(M is None):
+        M,inl= ransac_homography(dst_pts,src_pts)
+        if inl>best_inl and not( (M is None) or  (M[0]is None)):
             best_inl = inl
             best_index = j
-            best_transformation = M
+            best_transformation = M[0]
+
     # Print the resulting transformation matrix
     # print("Affine transformation matrix:")
     # print(M)
     if best_index == -1:
         print("detect failed")
         break
-    pieces[best_index] = cv2.warpAffine(pieces[best_index],best_transformation,(result.shape[1],result.shape[0]),flags=cv2.INTER_LINEAR,borderMode=cv2.BORDER_TRANSPARENT)
+    pieces[best_index] = cv2.warpPerspective(pieces[best_index],best_transformation,(result.shape[1],result.shape[0]),flags=cv2.INTER_LINEAR,borderMode=cv2.BORDER_TRANSPARENT)
     # Stitch warped puzzle pieces together
-    # plt.imshow(pieces[best_index])
-    # plt.show()
     coverage_count[pieces[best_index][:, :, 0] > 0] += 30
     result[pieces[best_index] != 0] = pieces[best_index][pieces[best_index] != 0]
     plt.imshow(result)
@@ -259,10 +285,18 @@ while len(pieces)>0:
     del kps[best_index]
     del dess[best_index]
 # Display results
-plt.imshow(result)
-plt.show()
-plt.imshow(coverage_count)
-plt.show()
-cv2.imwrite('puzzles/puzzle_homography_1/image.png', result)
+cv2.imshow("Puzzle", result)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+cv2.imshow("coverage", coverage_count)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+# new_image = Image.new(result,(699, 549))
+
+# Draw on the image (optional)
+# ...
+
+# Save the image to a file
+# cv2.imwrite('puzzles/puzzle_homography_1/image.png', result)
 
 
