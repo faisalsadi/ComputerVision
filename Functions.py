@@ -1,4 +1,5 @@
 ####################
+from matplotlib import colors
 
 
 def ransac_loop(matches, keypoints1, keypoints2, num_iterations=100, tolerance=10):
@@ -193,7 +194,7 @@ import os
 import matplotlib.pyplot as plt
 from PIL import Image
 # # Initialize SIFT detector
-def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,ransac_iterations=1000,inlier_threshold=5,min_inlier=4):
+def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,ransac_iterations=1000,inlier_threshold=2,min_inlier=4):
     sift = cv2.SIFT_create()
     # Load puzzle pieces
     #pieces_dir = "puzzles/puzzle_homography_6/pieces"
@@ -225,7 +226,7 @@ def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,r
         dess.append(d)
     ratio_threshold = ratio_thresh
     coverage_count = np.zeros((result.shape[0], result.shape[1],3), dtype=np.uint8)
-    coverage_count[onesimage[:, :, 0] > 0] += 30
+    coverage_count[onesimage[:, :, 0] > 0] += 1
     done=1
     while not (np.all(wrpd == True)):
         # distance matrix calculation
@@ -292,7 +293,7 @@ def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,r
         # Stitch warped puzzle pieces together
 
         # coverage_count[mask [:, :, 0] > 0] += 30
-        coverage_count[mask== 1] += 30
+        coverage_count[mask== 1] += 1
         # result[pieces[best_index] != 0] = pieces[best_index][pieces[best_index] != 0]
         #result[mask == 1] = pieces[best_index][mask == 1]
         gray_img_res = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
@@ -305,20 +306,23 @@ def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,r
                     #     result[i1][i2] = (result[i1][i2]+pieces[best_index][i1][i2])/2
 
 
-        # plt.imshow(result)
-        # plt.show()
+        plt.imshow(result)
+        plt.show()
         wrpd[best_index]=True
         done += 1
     # Display results
     plt.imshow(result)
     plt.show()
-    plt.imshow(coverage_count)
+    plt.imshow(cv2.cvtColor(coverage_count, cv2.COLOR_BGR2GRAY), vmin=coverage_count.min(), vmax=coverage_count.max())
+    plt.colorbar()
+    plt.savefig(output_dir+"coverage.jpeg")
     plt.show()
     output_dir_res = output_dir+"solution_"+str(done)+"_"+str(l)+".jpeg"
     cv2.imwrite(output_dir_res, result)
     for i in range(done):
-        output_dir_res = output_dir+"piece_"+str(i+1)+"_relative.jpeg"
-        cv2.imwrite(output_dir_res, pieces[i])
+        if wrpd[i]==True:
+            output_dir_res = output_dir+"piece_"+str(i+1)+"_relative.jpeg"
+            cv2.imwrite(output_dir_res, pieces[i])
 # cv2.imshow("coverage", coverage_count)
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
@@ -351,22 +355,25 @@ def affine(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,rans
                                borderMode=cv2.BORDER_TRANSPARENT)
     onesimage = cv2.warpAffine(onesimage, warp_mat, dimension, flags=cv2.INTER_CUBIC,
                                borderMode=cv2.BORDER_TRANSPARENT)
+    print("solved :", 1)
     l=len(pieces)
     result = pieces[0].copy()
     wrpd = np.zeros(len(pieces), dtype=bool)
     wrpd[0]=True
-    # plt.imshow(result)
-    # plt.show()
+    plt.imshow(result)
+    plt.show()
     # Ratio test parameters
     kps = []
     dess = []
     for i in range(len(pieces)):
+        #pieces[i]=cv2.resize(pieces[i], dimension)
         k, d = sift.detectAndCompute(cv2.cvtColor(pieces[i], cv2.COLOR_BGR2GRAY), None)
         kps.append(k)
         dess.append(d)
     ratio_threshold = ratio_thresh
     coverage_count = np.zeros((result.shape[0], result.shape[1], 3), dtype=np.uint8)
-    coverage_count[onesimage[:, :, 0] > 0] += 30
+    #coverage_count [:,:,2]+=100
+    coverage_count[onesimage[:, :, 0] > 0] += 1
     done = 1
     while not (np.all(wrpd == True)):
         # distance matrix calculation
@@ -376,7 +383,6 @@ def affine(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,rans
         best_inl = min_inlier
         best_index = -1
         best_transformation = []
-        print("solved :", done)
 
         ## loop over all pieces
         for j in range(len(pieces)):
@@ -436,12 +442,13 @@ def affine(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,rans
         ones_image = np.ones((pieces[best_index].shape[0], pieces[best_index].shape[1], 3), dtype=np.uint8)
         pieces[best_index] = cv2.warpAffine(pieces[best_index], best_transformation, (result.shape[1], result.shape[0]),
                                             flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_TRANSPARENT)
+
         ones_image = cv2.warpAffine(ones_image, best_transformation, (result.shape[1], result.shape[0]),
-                                    flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_TRANSPARENT)
+                                    flags=cv2.cv2.INTER_CUBIC, borderMode=cv2.BORDER_TRANSPARENT)
         # Stitch warped puzzle pieces together
         # plt.imshow(pieces[best_index])
         # plt.show()
-        coverage_count[ones_image[:, :, 0] > 0] += 30
+        coverage_count[ones_image[:, :, 0] > 0] += 1
         gray_img_res = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
         gray_img_piece = cv2.cvtColor(pieces[best_index], cv2.COLOR_BGR2GRAY)
         for i1 in range(result.shape[0]):
@@ -450,21 +457,39 @@ def affine(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,rans
                     result[i1][i2] = pieces[best_index][i1][i2]
         # Stack the images vertically
         # result = cv2.addWeighted(result, 0.5, pieces[best_index], 0.5, 0)
-        # plt.imshow(result)
-        # plt.show()
+        plt.imshow(result)
+        plt.show()
+        plt.imshow(pieces[best_index])
+        plt.show()
+        plt.imshow(cv2.cvtColor(coverage_count, cv2.COLOR_BGR2GRAY), vmin=coverage_count.min(),
+                   vmax=coverage_count.max())
+        plt.colorbar()
+        plt.show()
         # del pieces[best_index]
         # del kps[best_index]
         # del dess[best_index]
         wrpd[best_index]=True
         done += 1
+        print("solved :", done)
     # Display results
+    # Apply a color map to the coverage count image
     plt.imshow(result)
     plt.show()
-    plt.imshow(coverage_count)
+
+
+
+
+
+    plt.imshow(cv2.cvtColor(coverage_count, cv2.COLOR_BGR2GRAY), vmin=coverage_count.min(), vmax=coverage_count.max())
+    plt.colorbar()
+    plt.savefig(output_dir+"coverage.jpeg")
     plt.show()
+    # # Save the plot
+
     output_dir_res = output_dir+"solution_"+str(done)+"_"+str(l)+".jpeg"
     cv2.imwrite(output_dir_res, result)
     for i in range(done):
-        output_dir_res = output_dir+"piece_"+str(i+1)+"_relative.jpeg"
-        cv2.imwrite(output_dir_res, pieces[i])
+        if wrpd[i]==True:
+            output_dir_res = output_dir+"piece_"+str(i+1)+"_relative.jpeg"
+            cv2.imwrite(output_dir_res, pieces[i])
 
