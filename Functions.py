@@ -444,7 +444,7 @@ def affine(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,rans
                                             flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_TRANSPARENT)
 
         ones_image = cv2.warpAffine(ones_image, best_transformation, (result.shape[1], result.shape[0]),
-                                    flags=cv2.cv2.INTER_CUBIC, borderMode=cv2.BORDER_TRANSPARENT)
+                                    flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_TRANSPARENT)
         # Stitch warped puzzle pieces together
         # plt.imshow(pieces[best_index])
         # plt.show()
