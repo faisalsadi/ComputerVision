@@ -209,11 +209,13 @@ def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,r
         data = f.readlines()
         warp_mat = np.array([list(map(float, line.strip().split())) for line in data])
     #warp_mat=np.delete(warp_mat,-1,axis=0)
+    l = len(pieces)
     onesimage =np.ones((pieces[0].shape[0], pieces[0].shape[1],3), dtype=np.uint8)
     pieces[0] = cv2.warpPerspective(pieces[0],warp_mat,dimension,flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
     onesimage = cv2.warpPerspective(onesimage,warp_mat,dimension,flags=cv2.INTER_CUBIC,borderMode=cv2.BORDER_TRANSPARENT)
-    result = pieces[0]
-    del pieces[0]
+    result = pieces[0].copy()
+    wrpd = np.zeros(len(pieces), dtype=bool)
+    wrpd[0]=True
     # Ratio test parameters
     kps=[]
     dess=[]
@@ -224,10 +226,8 @@ def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,r
     ratio_threshold = ratio_thresh
     coverage_count = np.zeros((result.shape[0], result.shape[1],3), dtype=np.uint8)
     coverage_count[onesimage[:, :, 0] > 0] += 30
-    plt.imshow(result)
-    plt.show()
     done=1
-    while len(pieces)>0:
+    while not (np.all(wrpd == True)):
         # distance matrix calculation
 
         gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
@@ -236,48 +236,48 @@ def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,r
         best_index=-1
         best_transformation=[]
         print("solved :",done)
-        done+=1
         ## loop over all pieces
         for j in range(len(pieces)):
-            #gray= cv2.cvtColor(pieces[j],cv2.COLOR_BGR2GRAY)
-            kp_target, des_target = kps[j],dess[j]
-            # Calculate distance matrix
+            if wrpd[j] == False:
+                #gray= cv2.cvtColor(pieces[j],cv2.COLOR_BGR2GRAY)
+                kp_target, des_target = kps[j],dess[j]
+                # Calculate distance matrix
 
-            dist_matrix = np.linalg.norm(des[:, np.newaxis] - des_target, axis=2)
-            good_matches = []
-            # Loop through each descriptor in des0 and compare to closest descriptors in des1
-            for i, descriptor in enumerate(des):
-                # Calculate distance to closest and second closest descriptors
-                distances = dist_matrix[i]
-                sorted_distances_idx = np.argsort(distances)
-                closest_distance = distances[sorted_distances_idx[0]]
-                second_closest_distance = distances[sorted_distances_idx[1]]
+                dist_matrix = np.linalg.norm(des[:, np.newaxis] - des_target, axis=2)
+                good_matches = []
+                # Loop through each descriptor in des0 and compare to closest descriptors in des1
+                for i, descriptor in enumerate(des):
+                    # Calculate distance to closest and second closest descriptors
+                    distances = dist_matrix[i]
+                    sorted_distances_idx = np.argsort(distances)
+                    closest_distance = distances[sorted_distances_idx[0]]
+                    second_closest_distance = distances[sorted_distances_idx[1]]
 
-                # Check if the match passes the ratio test
-                if closest_distance / second_closest_distance < ratio_threshold:
-                    # Save the index of the matching descriptor in des1
-                    match_idx = sorted_distances_idx[0]
-                    good_matches.append((i, match_idx))
+                    # Check if the match passes the ratio test
+                    if closest_distance / second_closest_distance < ratio_threshold:
+                        # Save the index of the matching descriptor in des1
+                        match_idx = sorted_distances_idx[0]
+                        good_matches.append((i, match_idx))
 
-    # # Draw matching lines on image
-    # img_matches = cv2.drawMatches(pieces[0], kps[0], pieces[1], kps[1], [cv2.DMatch(_[0], _[1], 0) for _ in good_matches], None)
-    #
-    # # Show image with matches
-    # cv2.imshow("Matches", img_matches)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+        # # Draw matching lines on image
+        # img_matches = cv2.drawMatches(pieces[0], kps[0], pieces[1], kps[1], [cv2.DMatch(_[0], _[1], 0) for _ in good_matches], None)
+        #
+        # # Show image with matches
+        # cv2.imshow("Matches", img_matches)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
 
-        # Compute the affine transformation using OpenCV's getAffineTransform() function
-            src_pts = np.float32([kp[m[0]].pt for m in good_matches])#.reshape(-1,  2)
-            dst_pts = np.float32([kp_target[m[1]].pt for m in good_matches])#.reshape(-1,  2)
-            if len(src_pts)<4 or len(dst_pts)<4:
-                continue
-            M,inl= ransac_homography(dst_pts,src_pts,max_iter=ransac_iterations,inlier_threshold=inlier_threshold)
-            if inl>best_inl and not( (M is None) or  (M[0]is None)):
-                best_inl = inl
-                best_index = j
-                best_transformation = M[0]
+            # Compute the affine transformation using OpenCV's getAffineTransform() function
+                src_pts = np.float32([kp[m[0]].pt for m in good_matches])#.reshape(-1,  2)
+                dst_pts = np.float32([kp_target[m[1]].pt for m in good_matches])#.reshape(-1,  2)
+                if len(src_pts)<4 or len(dst_pts)<4:
+                    continue
+                M,inl= ransac_homography(dst_pts,src_pts,max_iter=ransac_iterations,inlier_threshold=inlier_threshold)
+                if inl>best_inl and not( (M is None) or  (M[0]is None)):
+                    best_inl = inl
+                    best_index = j
+                    best_transformation = M[0]
 
         # Print the resulting transformation matrix
         # print("Affine transformation matrix:")
@@ -307,15 +307,18 @@ def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,r
 
         # plt.imshow(result)
         # plt.show()
-        del pieces[best_index]
-        del kps[best_index]
-        del dess[best_index]
+        wrpd[best_index]=True
+        done += 1
     # Display results
     plt.imshow(result)
     plt.show()
     plt.imshow(coverage_count)
     plt.show()
-    cv2.imwrite(output_dir, result)
+    output_dir_res = output_dir+"solution_"+str(done)+"_"+str(l)+".jpeg"
+    cv2.imwrite(output_dir_res, result)
+    for i in range(done):
+        output_dir_res = output_dir+"piece_"+str(i+1)+"_relative.jpeg"
+        cv2.imwrite(output_dir_res, pieces[i])
 # cv2.imshow("coverage", coverage_count)
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
@@ -327,7 +330,7 @@ def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,r
 # Save the image to a file
 # cv2.imwrite('puzzles/puzzle_homography_1/image.png', result)
 
-def affine(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,ransac_iterations=1000,inlier_threshold=5,min_inlier=3):
+def affine(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,ransac_iterations=1000,inlier_threshold=2,min_inlier=10):
     # # Initialize SIFT detector
     sift = cv2.SIFT_create()
     # Load puzzle pieces
@@ -348,8 +351,10 @@ def affine(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,rans
                                borderMode=cv2.BORDER_TRANSPARENT)
     onesimage = cv2.warpAffine(onesimage, warp_mat, dimension, flags=cv2.INTER_CUBIC,
                                borderMode=cv2.BORDER_TRANSPARENT)
-    result = pieces[0]
-    del pieces[0]
+    l=len(pieces)
+    result = pieces[0].copy()
+    wrpd = np.zeros(len(pieces), dtype=bool)
+    wrpd[0]=True
     # plt.imshow(result)
     # plt.show()
     # Ratio test parameters
@@ -363,7 +368,7 @@ def affine(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,rans
     coverage_count = np.zeros((result.shape[0], result.shape[1], 3), dtype=np.uint8)
     coverage_count[onesimage[:, :, 0] > 0] += 30
     done = 1
-    while len(pieces) > 0:
+    while not (np.all(wrpd == True)):
         # distance matrix calculation
 
         gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
@@ -372,55 +377,56 @@ def affine(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,rans
         best_index = -1
         best_transformation = []
         print("solved :", done)
-        done += 1
+
         ## loop over all pieces
         for j in range(len(pieces)):
-            # gray= cv2.cvtColor(pieces[j],cv2.COLOR_BGR2GRAY)
-            kp_target, des_target = kps[j], dess[j]
-            # Calculate distance matrix
-            dist_matrix = np.linalg.norm(des[:, np.newaxis] - des_target, axis=2)
-            # dist_matrix = []
-            # for i1 in range(des.shape[0]):
-            #     row = []
-            #     for j1 in range(des_target.shape[0]):
-            #         dist = 0
-            #         for k1 in range(des.shape[1]):
-            #             dist += (des[i1][k1] - des_target[j1][k1]) ** 2
-            #         row.append(math.sqrt(dist))
-            #     dist_matrix.append(row)
-            good_matches = []
-            # Loop through each descriptor in des0 and compare to closest descriptors in des1
-            for i, descriptor in enumerate(des):
-                # Calculate distance to closest and second closest descriptors
-                distances = dist_matrix[i]
-                sorted_distances_idx = np.argsort(distances)
-                closest_distance = distances[sorted_distances_idx[0]]
-                second_closest_distance = distances[sorted_distances_idx[1]]
+            if wrpd[j]==False:
+                # gray= cv2.cvtColor(pieces[j],cv2.COLOR_BGR2GRAY)
+                kp_target, des_target = kps[j], dess[j]
+                # Calculate distance matrix
+                dist_matrix = np.linalg.norm(des[:, np.newaxis] - des_target, axis=2)
+                # dist_matrix = []
+                # for i1 in range(des.shape[0]):
+                #     row = []
+                #     for j1 in range(des_target.shape[0]):
+                #         dist = 0
+                #         for k1 in range(des.shape[1]):
+                #             dist += (des[i1][k1] - des_target[j1][k1]) ** 2
+                #         row.append(math.sqrt(dist))
+                #     dist_matrix.append(row)
+                good_matches = []
+                # Loop through each descriptor in des0 and compare to closest descriptors in des1
+                for i, descriptor in enumerate(des):
+                    # Calculate distance to closest and second closest descriptors
+                    distances = dist_matrix[i]
+                    sorted_distances_idx = np.argsort(distances)
+                    closest_distance = distances[sorted_distances_idx[0]]
+                    second_closest_distance = distances[sorted_distances_idx[1]]
 
-                # Check if the match passes the ratio test
-                if closest_distance / second_closest_distance < ratio_threshold:
-                    # Save the index of the matching descriptor in des1
-                    match_idx = sorted_distances_idx[0]
-                    good_matches.append((i, match_idx))
+                    # Check if the match passes the ratio test
+                    if closest_distance / second_closest_distance < ratio_threshold:
+                        # Save the index of the matching descriptor in des1
+                        match_idx = sorted_distances_idx[0]
+                        good_matches.append((i, match_idx))
 
-            # # Draw matching lines on image
-            # img_matches = cv2.drawMatches(pieces[0], kps[0], pieces[1], kps[1], [cv2.DMatch(_[0], _[1], 0) for _ in good_matches], None)
-            #
-            # # Show image with matches
-            # cv2.imshow("Matches", img_matches)
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
+                # # Draw matching lines on image
+                # img_matches = cv2.drawMatches(pieces[0], kps[0], pieces[1], kps[1], [cv2.DMatch(_[0], _[1], 0) for _ in good_matches], None)
+                #
+                # # Show image with matches
+                # cv2.imshow("Matches", img_matches)
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
 
-            # Compute the affine transformation using OpenCV's getAffineTransform() function
-            src_pts = np.float32([kp[m[0]].pt for m in good_matches])  # .reshape(-1,  2)
-            dst_pts = np.float32([kp_target[m[1]].pt for m in good_matches])  # .reshape(-1,  2)
-            if len(src_pts) < 3 or len(dst_pts) < 3:
-                continue
-            M, inl = ransac_affine1(dst_pts, src_pts,max_iter=ransac_iterations,inlier_threshold=inlier_threshold)
-            if inl >= best_inl and not (M is None):
-                best_inl = inl
-                best_index = j
-                best_transformation = M
+                # Compute the affine transformation using OpenCV's getAffineTransform() function
+                src_pts = np.float32([kp[m[0]].pt for m in good_matches])  # .reshape(-1,  2)
+                dst_pts = np.float32([kp_target[m[1]].pt for m in good_matches])  # .reshape(-1,  2)
+                if len(src_pts) < 3 or len(dst_pts) < 3:
+                    continue
+                M, inl = ransac_affine1(dst_pts, src_pts,max_iter=ransac_iterations,inlier_threshold=inlier_threshold)
+                if inl >= best_inl and not (M is None):
+                    best_inl = inl
+                    best_index = j
+                    best_transformation = M
         # Print the resulting transformation matrix
         # print("Affine transformation matrix:")
         # print(M)
@@ -446,12 +452,19 @@ def affine(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,rans
         # result = cv2.addWeighted(result, 0.5, pieces[best_index], 0.5, 0)
         # plt.imshow(result)
         # plt.show()
-        del pieces[best_index]
-        del kps[best_index]
-        del dess[best_index]
+        # del pieces[best_index]
+        # del kps[best_index]
+        # del dess[best_index]
+        wrpd[best_index]=True
+        done += 1
     # Display results
     plt.imshow(result)
     plt.show()
     plt.imshow(coverage_count)
     plt.show()
-    cv2.imwrite(output_dir, result)
+    output_dir_res = output_dir+"solution_"+str(done)+"_"+str(l)+".jpeg"
+    cv2.imwrite(output_dir_res, result)
+    for i in range(done):
+        output_dir_res = output_dir+"piece_"+str(i+1)+"_relative.jpeg"
+        cv2.imwrite(output_dir_res, pieces[i])
+

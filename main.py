@@ -297,29 +297,45 @@ affine_transforms=[" ","puzzles/puzzle_affine_1/warp_mat_1__H_521__W_760_.txt","
                    "puzzles/puzzle_affine_5/warp_mat_1__H_510__W_783_.txt","puzzles/puzzle_affine_6/warp_mat_1__H_522__W_732_.txt",
                    "puzzles/puzzle_affine_7/warp_mat_1__H_511__W_732_.txt","puzzles/puzzle_affine_8/warp_mat_1__H_457__W_811_.txt",
                    "puzzles/puzzle_affine_9/warp_mat_1__H_481__W_771_.txt","puzzles/puzzle_affine_10/warp_mat_1__H_507__W_771_.txt"]
-homograph_transforms=[" ","puzzles/puzzle_affine_1/warp_mat_1__H_521__W_760_.txt","puzzles/puzzle_affine_2/warp_mat_1__H_537__W_735_.txt",
+homograph_transforms=[" ","puzzles/puzzle_homography_1/warp_mat_1__H_549__W_699_.txt","puzzles/puzzle_affine_2/warp_mat_1__H_537__W_735_.txt",
                    "puzzles/puzzle_affine_3/warp_mat_1__H_497__W_741_.txt","puzzles/puzzle_affine_4/warp_mat_1__H_457__W_808_.txt",
                    "puzzles/puzzle_affine_5/warp_mat_1__H_510__W_783_.txt","puzzles/puzzle_affine_6/warp_mat_1__H_522__W_732_.txt",
                    "puzzles/puzzle_affine_7/warp_mat_1__H_511__W_732_.txt","puzzles/puzzle_affine_8/warp_mat_1__H_457__W_811_.txt",
                    "puzzles/puzzle_affine_9/warp_mat_1__H_481__W_771_.txt","puzzles/puzzle_affine_10/warp_mat_1__H_507__W_771_.txt"]
 affine_dim=[(),(760,521),(735,537),(741,497),(808,457),(783,510),(732,522),(732,511),(811,457),(771,481),(771,507)]
-# homograph dims here
-output_affine=[' ','puzzles/puzzle_affine_1/image.png','puzzles/puzzle_affine_2/image.png',
-               'puzzles/puzzle_affine_3/image.png','puzzles/puzzle_affine_4/image.png'
-               ,'puzzles/puzzle_affine_5/image.png','puzzles/puzzle_affine_6/image.png'
-               ,'puzzles/puzzle_affine_7/image.png','puzzles/puzzle_affine_8/image.png'
-               ,'puzzles/puzzle_affine_9/image.png','puzzles/puzzle_affine_10/image.png']
-output_homography=[' ','puzzles/puzzle_homography_1/image.png','puzzles/puzzle_homography_2/image.png',
-               'puzzles/puzzle_homography_3/image.png','puzzles/puzzle_homography_4/image.png'
-               ,'puzzles/puzzle_homography_5/image.png','puzzles/puzzle_homography_6/image.png'
-               ,'puzzles/puzzle_homography_7/image.png','puzzles/puzzle_homography_8/image.png'
-               ,'puzzles/puzzle_homography_9/image.png','puzzles/puzzle_homography_10/image.png']
+homograph_dim=[(),(760,521),(735,537),(741,497),(808,457),(783,510),(732,522),(732,511),(811,457),(771,481),(771,507)]
+output_affine=[' ','puzzles/puzzle_affine_1/','puzzles/puzzle_affine_2/',
+               'puzzles/puzzle_affine_3/','puzzles/puzzle_affine_4/'
+               ,'puzzles/puzzle_affine_5/','puzzles/puzzle_affine_6/'
+               ,'puzzles/puzzle_affine_7/','puzzles/puzzle_affine_8/'
+               ,'puzzles/puzzle_affine_9/','puzzles/puzzle_affine_10/']
+output_homography=[' ','puzzles/puzzle_homography_1/','puzzles/puzzle_homography_2/',
+               'puzzles/puzzle_homography_3/solution_','puzzles/puzzle_homography_4/solution_'
+               ,'puzzles/puzzle_homography_5/solution_','puzzles/puzzle_homography_6/solution_'
+               ,'puzzles/puzzle_homography_7/solution_','puzzles/puzzle_homography_8/solution_'
+               ,'puzzles/puzzle_homography_9/solution_','puzzles/puzzle_homography_10/solution_']
 
-for i in range (1,6):
-    print("** puzzle number: ",i," **")
-    affine(affine_pieces_dir[i], affine_transforms[i], affine_dim[i], output_affine[i])
-#affine(affine_pieces_dir[4], affine_transforms[4], affine_dim[4], output_affine[4],min_inlier=10)
-
+# for i in range (1,3):
+#     print("** puzzle number: ",i," **")
+#     affine(affine_pieces_dir[i], affine_transforms[i], affine_dim[i], output_affine[i],ratio_thresh=0.4)
+# affine(affine_pieces_dir[3], affine_transforms[3], affine_dim[3], output_affine[3],ratio_thresh=0.4,min_inlier=20,ransac_iterations=5000)
+# affine(affine_pieces_dir[4], affine_transforms[4], affine_dim[4], output_affine[4],min_inlier=20,ransac_iterations=5000)
+# affine(affine_pieces_dir[5], affine_transforms[5], affine_dim[5], output_affine[5],min_inlier=10,ransac_iterations=1000)
+#affine(affine_pieces_dir[6], affine_transforms[6], affine_dim[6], output_affine[6],min_inlier=20,ransac_iterations=1000)
+# affine(affine_pieces_dir[7], affine_transforms[7], affine_dim[7], output_affine[7],min_inlier=10,ransac_iterations=1000)
+# affine(affine_pieces_dir[8], affine_transforms[8], affine_dim[8], output_affine[8],min_inlier=20,ransac_iterations=5000)
+# affine(affine_pieces_dir[9], affine_transforms[9], affine_dim[9], output_affine[9],min_inlier=10,ransac_iterations=1000)
+# affine(affine_pieces_dir[10], affine_transforms[10], affine_dim[10], output_affine[10],min_inlier=20,ransac_iterations=5000)
+homograph(homograph_pieces_dir[1], homograph_transforms[1], homograph_dim[1], output_homography[1],min_inlier=20,ransac_iterations=5000)
+# homograph(homograph_pieces_dir[1], homograph_transforms[1], homograph_dim[1], output_homography[1],min_inlier=20,ransac_iterations=5000)
+# homograph(homograph_pieces_dir[1], homograph_transforms[1], homograph_dim[1], output_homography[1],min_inlier=20,ransac_iterations=5000)
+# homograph(homograph_pieces_dir[1], homograph_transforms[1], homograph_dim[1], output_homography[1],min_inlier=20,ransac_iterations=5000)
+# homograph(homograph_pieces_dir[1], homograph_transforms[1], homograph_dim[1], output_homography[1],min_inlier=20,ransac_iterations=5000)
+# homograph(homograph_pieces_dir[1], homograph_transforms[1], homograph_dim[1], output_homography[1],min_inlier=20,ransac_iterations=5000)
+# homograph(homograph_pieces_dir[1], homograph_transforms[1], homograph_dim[1], output_homography[1],min_inlier=20,ransac_iterations=5000)
+# homograph(homograph_pieces_dir[1], homograph_transforms[1], homograph_dim[1], output_homography[1],min_inlier=20,ransac_iterations=5000)
+# homograph(homograph_pieces_dir[1], homograph_transforms[1], homograph_dim[1], output_homography[1],min_inlier=20,ransac_iterations=5000)
+# homograph(homograph_pieces_dir[1], homograph_transforms[1], homograph_dim[1], output_homography[1],min_inlier=20,ransac_iterations=5000)
 # threads = []
 # # create 10 threads and add them to the array
 # for i in range(1,6):
