@@ -192,7 +192,7 @@ import cv2
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from PIL import Image
+
 # # Initialize SIFT detector
 def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,ransac_iterations=1000,inlier_threshold=2,min_inlier=4):
     sift = cv2.SIFT_create()
