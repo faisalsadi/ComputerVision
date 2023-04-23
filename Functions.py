@@ -221,6 +221,7 @@ def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,r
     kps=[]
     dess=[]
     for i in range(len(pieces)):
+        # pieces[i]=cv2.resize(pieces[i], dimension)
         k,d=sift.detectAndCompute(cv2.cvtColor(pieces[i], cv2.COLOR_BGR2GRAY), None)
         kps.append(k)
         dess.append(d)
@@ -275,7 +276,7 @@ def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,r
                 if len(src_pts)<4 or len(dst_pts)<4:
                     continue
                 M,inl= ransac_homography(dst_pts,src_pts,max_iter=ransac_iterations,inlier_threshold=inlier_threshold)
-                if inl>best_inl and not( (M is None) or  (M[0]is None)):
+                if inl>=best_inl and not( (M is None) or  (M[0]is None)):
                     best_inl = inl
                     best_index = j
                     best_transformation = M[0]
@@ -302,8 +303,8 @@ def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,r
             for i2 in range (result.shape[1]):
                  if gray_img_res[i1][i2] == 0 and gray_img_piece[i1][i2]!=0:
                     result[i1][i2] = pieces[best_index][i1][i2]
-                    # else:
-                    #     result[i1][i2] = (result[i1][i2]+pieces[best_index][i1][i2])/2
+                 # if gray_img_res[i1][i2] != 0 and gray_img_piece[i1][i2] != 0:
+                 #    result[i1][i2] =(result[i1][i2]+ pieces[best_index][i1][i2])/2
 
 
         plt.imshow(result)
