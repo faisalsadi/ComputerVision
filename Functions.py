@@ -319,7 +319,7 @@ def homograph(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,r
     plt.show()
     output_dir_res = output_dir+"solution_"+str(done)+"_"+str(l)+".jpeg"
     cv2.imwrite(output_dir_res, result)
-    for i in range(done):
+    for i in range(len(wrpd)):
         if wrpd[i]==True:
             output_dir_res = output_dir+"piece_"+str(i+1)+"_relative.jpeg"
             cv2.imwrite(output_dir_res, pieces[i])
@@ -488,7 +488,7 @@ def affine(pieces_path,transform_path,dimension,output_dir,ratio_thresh=0.7,rans
 
     output_dir_res = output_dir+"solution_"+str(done)+"_"+str(l)+".jpeg"
     cv2.imwrite(output_dir_res, result)
-    for i in range(done):
+    for i in range(len(wrpd)):
         if wrpd[i]==True:
             output_dir_res = output_dir+"piece_"+str(i+1)+"_relative.jpeg"
             cv2.imwrite(output_dir_res, pieces[i])

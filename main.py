@@ -315,16 +315,16 @@ output_homography=[' ','puzzles/puzzle_homography_1/','puzzles/puzzle_homography
                ,'puzzles/puzzle_homography_7/','puzzles/puzzle_homography_8/'
                ,'puzzles/puzzle_homography_9/','puzzles/puzzle_homography_10/']
 ##################              affine puzzles      ###################################
-affine(affine_pieces_dir[1], affine_transforms[1], affine_dim[1], output_affine[1],ratio_thresh=0.4)
-affine(affine_pieces_dir[2], affine_transforms[2], affine_dim[2], output_affine[2],ratio_thresh=0.4)
-affine(affine_pieces_dir[3], affine_transforms[3], affine_dim[3], output_affine[3],ratio_thresh=0.4,min_inlier=20,ransac_iterations=5000)
-affine(affine_pieces_dir[4], affine_transforms[4], affine_dim[4], output_affine[4],min_inlier=20,ransac_iterations=5000)
-affine(affine_pieces_dir[5], affine_transforms[5], affine_dim[5], output_affine[5],min_inlier=10,ransac_iterations=5000)
-affine(affine_pieces_dir[6], affine_transforms[6], affine_dim[6], output_affine[6],min_inlier=20,ransac_iterations=5000)
-affine(affine_pieces_dir[7], affine_transforms[7], affine_dim[7], output_affine[7],ratio_thresh=0.7,inlier_threshold=2,min_inlier=3,ransac_iterations=10000)
-# affine(affine_pieces_dir[8], affine_transforms[8], affine_dim[8], output_affine[8],min_inlier=20,ransac_iterations=5000)
-# affine(affine_pieces_dir[9], affine_transforms[9], affine_dim[9], output_affine[9],min_inlier=10,ransac_iterations=1000)
-# affine(affine_pieces_dir[10], affine_transforms[10], affine_dim[10], output_affine[10],min_inlier=20,ransac_iterations=5000)
+# affine(affine_pieces_dir[1], affine_transforms[1], affine_dim[1], output_affine[1],ratio_thresh=0.4)
+# affine(affine_pieces_dir[2], affine_transforms[2], affine_dim[2], output_affine[2],ratio_thresh=0.4)
+# affine(affine_pieces_dir[3], affine_transforms[3], affine_dim[3], output_affine[3],ratio_thresh=0.4,min_inlier=20,ransac_iterations=5000)
+# affine(affine_pieces_dir[4], affine_transforms[4], affine_dim[4], output_affine[4],min_inlier=20,ransac_iterations=5000)
+# affine(affine_pieces_dir[5], affine_transforms[5], affine_dim[5], output_affine[5],min_inlier=10,ransac_iterations=5000)
+# affine(affine_pieces_dir[6], affine_transforms[6], affine_dim[6], output_affine[6],min_inlier=20,ransac_iterations=5000)
+#affine(affine_pieces_dir[7], affine_transforms[7], affine_dim[7], output_affine[7],ratio_thresh=0.7,inlier_threshold=2,min_inlier=20,ransac_iterations=1000)
+#affine(affine_pieces_dir[8], affine_transforms[8], affine_dim[8], output_affine[8],min_inlier=10,ransac_iterations=5000)
+#affine(affine_pieces_dir[9], affine_transforms[9], affine_dim[9], output_affine[9],min_inlier=10,ransac_iterations=10000)
+affine(affine_pieces_dir[10], affine_transforms[10], affine_dim[10], output_affine[10],ratio_thresh=0.8,min_inlier=10,ransac_iterations=10000)
 ##################           homograph puzzles ##########################################
 #homograph(homograph_pieces_dir[1], homograph_transforms[1], homograph_dim[1], output_homography[1],min_inlier=20,ransac_iterations=5000)
 #homograph(homograph_pieces_dir[2], homograph_transforms[2], homograph_dim[2], output_homography[2],min_inlier=20,ransac_iterations=5000)
