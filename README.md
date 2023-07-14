@@ -7,10 +7,10 @@ Faisal Saadi
 
 Mohammad Sghayar
 
-This repository contains our solutions for the assignments completed during the Computer Vision course at the University of Haifa. The course focused on various aspects of computer vision such as , and I successfully completed three assignments:
+This repository contains our solutions for the assignments completed during the Computer Vision course at the University of Haifa. The course focused on various aspects of computer vision such as , and we successfully completed three assignments:
 
 Assignment 1: Puzzle Solver using RANSAC
-In this assignment, I developed a puzzle solver using the Random Sample Consensus (RANSAC) algorithm. The goal was to stitch a given set of images together in the correct order so that the stitched images would form a complete puzzle. Prior to the stitching process, we implemented a method to calculate the correct position of each image. The resulting puzzle solver is capable of accurately arranging the images to create the final puzzle.
+In this assignment, we developed a puzzle solver using the Random Sample Consensus (RANSAC) algorithm. The goal was to stitch a given set of images together in the correct order so that the stitched images would form a complete puzzle. Prior to the stitching process, we implemented a method to calculate the correct position of each image. The resulting puzzle solver is capable of accurately arranging the images to create the final puzzle.
 ![image](https://github.com/faisalsadi/ComputerVision/assets/31912809/df5411d5-4b8b-4d8b-8230-66ccd8115641)
 
 Assignment 2: Depth and Disparity Maps Calculation
@@ -33,4 +33,4 @@ Assignment2/: Includes the code and files related to the Depth and Disparity Map
 
 Assignment3/: Contains the code and files related to the MNIST Neural Network Digit Classifier assignment.
 
-Thank you for taking the time to review my work. I hope you find it informative and valuable.
+Thank you for taking the time to review our work. I hope you find it informative and valuable.
