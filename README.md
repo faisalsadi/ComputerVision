@@ -1,11 +1,11 @@
 # ComputerVision
-Computer vision homeworks
+Computer vision Assignments
 
 Team:
 
 Faisal Saadi
 
-Mohamad Sghayar
+Mohammad Sghayar
 
 This repository contains our solutions for the assignments completed during the Computer Vision course at the University of Haifa. The course focused on various aspects of computer vision such as , and I successfully completed three assignments:
 
@@ -26,7 +26,11 @@ In the third assignment, we developed a digit classifier using a neural network 
 Please feel free to explore the repository to review our code and the corresponding results for each assignment. If you have any questions or feedback, don't hesitate to reach out to me.
 
 Repository Structure
+
 Assignment1/: Contains the code and files related to the Puzzle Solver using RANSAC assignment.
+
 Assignment2/: Includes the code and files related to the Depth and Disparity Maps Calculation assignment.
+
 Assignment3/: Contains the code and files related to the MNIST Neural Network Digit Classifier assignment.
+
 Thank you for taking the time to review my work. I hope you find it informative and valuable.
