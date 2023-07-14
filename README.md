@@ -1,6 +1,8 @@
 # ComputerVision
 Computer vision Assignments
 
+Lecturer : Dr. Simon Korman
+
 Team:
 
 Faisal Saadi
