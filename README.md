@@ -15,9 +15,13 @@ In this assignment, I developed a puzzle solver using the Random Sample Consensu
 
 Assignment 2: Depth and Disparity Maps Calculation
 For this assignment, we worked on calculating depth and disparity maps using stereo images. Given a pair of stereo images, we implemented algorithms to compute the depth map, which provides information about the distance of objects from the camera, and the disparity map, which indicates the difference in horizontal pixel coordinates between the left and right images. Additionally, we generated ten synthetic images along the X-axis between the two original images, enhancing the understanding of depth perception.
+![image](https://github.com/faisalsadi/ComputerVision/assets/31912809/69cbf828-0c63-4711-918d-88930a8909b2)
+
+![image](https://github.com/faisalsadi/ComputerVision/assets/31912809/c6bcc299-00de-4ea2-97b3-2f4d0bcea793)
 
 Assignment 3: MNIST Neural Network Digit Classifier
 In the third assignment, we developed a digit classifier using a neural network architecture for the MNIST dataset. The goal was to create a model capable of accurately classifying handwritten digits. By implementing the neural network, we achieved an accuracy of over 90% in digit classification, showcasing the effectiveness of the model.
+
 
 Please feel free to explore the repository to review our code and the corresponding results for each assignment. If you have any questions or feedback, don't hesitate to reach out to me.
 
