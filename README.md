@@ -9,7 +9,7 @@ Faisal Saadi
 
 Mohammad Sghayar
 
-This repository contains our solutions for the assignments completed during the Computer Vision course at the University of Haifa. The course focused on various aspects of computer vision such as , and we successfully completed three assignments:
+This repository contains our solutions for the assignments completed during the Computer Vision course at the University of Haifa. The course focused on various aspects of computer vision such as deep learning , camera geometry , Sterore images ,Object recognition:
 
 Assignment 1: Puzzle Solver using RANSAC
 In this assignment, we developed a puzzle solver using the Random Sample Consensus (RANSAC) algorithm. The goal was to stitch a given set of images together in the correct order so that the stitched images would form a complete puzzle. Prior to the stitching process, we implemented a method to calculate the correct position of each image. The resulting puzzle solver is capable of accurately arranging the images to create the final puzzle.
